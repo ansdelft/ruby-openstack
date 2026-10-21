@@ -34,6 +34,8 @@ class Connection
     attr_reader   :proxy_port
     attr_reader   :ca_cert
     attr_reader   :ssl_version
+    attr_reader   :open_timeout
+    attr_reader   :read_timeout
     attr_reader   :region
     attr_reader   :regions_list #e.g. os.connection.regions_list == {"region-a.geo-1" => [ {:service=>"object-store", :versionId=>"1.0"}, {:service=>"identity", :versionId=>"2.0"}], "region-b.geo-1"=>[{:service=>"identity", :versionId=>"2.0"}] }
     attr_reader   :force_https
@@ -78,6 +80,8 @@ class Connection
     #   :proxy_port - If you need to connect through a proxy, supply the port here
     #   :ca_cert - path to a CA chain in PEM format
     #   :ssl_version - explicitly set an version (:SSLv3 etc, see  OpenSSL::SSL::SSLContext::METHODS)
+    #   :open_timeout - Seconds to wait for a connection to open. Defaults to Net::HTTP's default
+    #   :read_timeout - Seconds to wait for a response. Defaults to Net::HTTP's default
     #   :is_debug - Only for development purpose for debug output
     #   :endpoint_type - Type of endpoint. Optional. 'publicURL', 'internalURL', 'adminURL'
     #   :random_endpoint - (Optional for v3.0 auth only). Select random endpoint from the list provided by the
@@ -151,6 +155,8 @@ class Connection
       @proxy_port = options[:proxy_port]
       @ca_cert = options[:ca_cert]
       @ssl_version = options[:ssl_version]
+      @open_timeout = options[:open_timeout]
+      @read_timeout = options[:read_timeout]
       @authok = false
       @http = {}
       @quantum_version = 'v2.0' if @service_type == 'network'
@@ -269,6 +275,12 @@ class Connection
       res.code.match(/^20.$/) ? (return res) : OpenStack::Exception.raise_exception(res)
     end
 
+    # Leaves Net::HTTP's defaults in place when no timeout was given
+    def set_timeouts(http) # :nodoc:
+      http.open_timeout = @open_timeout if @open_timeout
+      http.read_timeout = @read_timeout if @read_timeout
+    end
+
     private
 
     def log_request(request_id, message)
@@ -297,6 +309,7 @@ class Connection
       if (@http[server].nil?)
         begin
           @http[server] = Net::HTTP::Proxy(@proxy_host, @proxy_port).new(server,port)
+          set_timeouts(@http[server])
           if scheme == "https"
             @http[server].use_ssl = true
             @http[server].verify_mode = OpenSSL::SSL::VERIFY_NONE
@@ -354,6 +367,7 @@ class Connection
       hdrhash = { "X-Auth-User" => connection.authuser, "X-Auth-Key" => connection.authkey }
       begin
         server = Net::HTTP::Proxy(connection.proxy_host, connection.proxy_port).new(connection.auth_host, connection.auth_port)
+        connection.set_timeouts(server)
         if connection.auth_scheme == "https"
           server.use_ssl = true
           server.verify_mode = OpenSSL::SSL::VERIFY_NONE
@@ -409,6 +423,7 @@ class Connection
 
       begin
         server = Net::HTTP::Proxy(connection.proxy_host, connection.proxy_port).new(connection.auth_host, connection.auth_port)
+        connection.set_timeouts(server)
         if connection.auth_scheme == "https"
           server.use_ssl = true
           server.verify_mode = OpenSSL::SSL::VERIFY_NONE
@@ -521,6 +536,7 @@ class Connection
 
       begin
         server = Net::HTTP::Proxy(connection.proxy_host, connection.proxy_port).new(connection.auth_host, connection.auth_port)
+        connection.set_timeouts(server)
         if connection.auth_scheme == "https"
           server.use_ssl = true
           server.verify_mode = OpenSSL::SSL::VERIFY_NONE
