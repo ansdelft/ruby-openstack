@@ -34,4 +34,31 @@ class ComputeConnectionTest < Test::Unit::TestCase
       conn = OpenStack::Connection.create(:username => "test_account", :api_key => "AABBCCDD11", :auth_url => "https://a.b.c")
       assert_not_nil conn, "Connection.new returned nil."
   end
+
+  def test_csreq_gives_up_after_the_configured_retries
+    conn = timing_out_connection
+    conn.http["a.b.c"].expects(:request).twice.raises(Net::ReadTimeout)
+
+    assert_raises(OpenStack::Exception::Connection) do
+      conn.csreq("HEAD", "a.b.c", "/path", 443, "https")
+    end
+  end
+
+  def test_put_object_gives_up_after_the_configured_retries
+    conn = timing_out_connection
+    conn.http["a.b.c"].expects(:request).twice.raises(Net::ReadTimeout)
+
+    assert_raises(OpenStack::Exception::Connection) do
+      conn.put_object("a.b.c", "/path", 443, "https", {}, "data")
+    end
+  end
+
+  private
+
+  def timing_out_connection
+    conn = OpenStack::Connection.create(:username => "test_account", :api_key => "AABBCCDD11", :auth_url => "https://a.b.c", :retries => 2).connection
+    conn.stubs(:sleep)
+    conn.http["a.b.c"] = stub(:started? => false)
+    conn
+  end
 end

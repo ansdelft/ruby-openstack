@@ -170,8 +170,9 @@ class Connection
     #specialised from of csreq for PUT object... uses body_stream if possible
     def put_object(server,path,port,scheme,headers = {},data = nil,attempts = 0) # :nodoc:
 
-      tries = @retries
-      time = 3
+      # ||= keeps the counters when the method-level rescue retries the method body
+      tries ||= @retries
+      time ||= 3
 
       if data.respond_to? :read
         headers['Transfer-Encoding'] = 'chunked'
@@ -215,8 +216,9 @@ class Connection
 
     # This method actually makes the HTTP REST calls out to the server
     def csreq(method,server,path,port,scheme,headers = {},data = nil,attempts = 0, &block) # :nodoc:
-      tries = @retries
-      time = 3
+      # ||= keeps the counters when the method-level rescue retries the method body
+      tries ||= @retries
+      time ||= 3
 
       request_id = "req-#{SecureRandom.uuid}"
       started_timestamp = Time.now.to_f * 1000
