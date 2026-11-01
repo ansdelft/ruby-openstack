@@ -7,7 +7,7 @@ class VolumeConnectionTest < Test::Unit::TestCase
     conn_response = { 'x-server-management-url' => 'http://server-manage.example.com/path', 'x-auth-token' => 'dummy_token' }
     conn_response.stubs(code: '200', body: auth_server_json_response)
     server = mock(start: true, finish: true)
-    server.stubs(post: conn_response, started?: true)
+    server.stubs(post: conn_response, started?: true, "max_retries=": true)
     Net::HTTP.stubs(:new).returns(server)
     OpenStack::Connection.create(
       username: 'test_account',

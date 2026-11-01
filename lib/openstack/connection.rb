@@ -277,10 +277,13 @@ class Connection
       res.code.match(/^20.$/) ? (return res) : OpenStack::Exception.raise_exception(res)
     end
 
-    # Leaves Net::HTTP's defaults in place when no timeout was given
+    # Leaves Net::HTTP's default timeouts in place when none was given, and
+    # turns off Net::HTTP's own retry of idempotent requests, since the
+    # callers already retry timeouts themselves
     def set_timeouts(http) # :nodoc:
       http.open_timeout = @open_timeout if @open_timeout
       http.read_timeout = @read_timeout if @read_timeout
+      http.max_retries = 0
     end
 
     private

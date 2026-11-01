@@ -53,6 +53,16 @@ class ComputeConnectionTest < Test::Unit::TestCase
     end
   end
 
+  def test_set_timeouts_turns_off_net_http_retries
+    conn = OpenStack::Connection.create(:username => "test_account", :api_key => "AABBCCDD11", :auth_url => "https://a.b.c", :read_timeout => 30).connection
+    http = Net::HTTP.new("a.b.c", 443)
+
+    conn.set_timeouts(http)
+
+    assert_equal 30, http.read_timeout
+    assert_equal 0, http.max_retries
+  end
+
   private
 
   def timing_out_connection
