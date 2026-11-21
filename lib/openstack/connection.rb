@@ -173,6 +173,9 @@ class Connection
       # ||= keeps the counters when the method-level rescue retries the method body
       tries ||= @retries
       time ||= 3
+      # A retry runs this body again; resend the stream from where the first attempt started
+      start ||= data.pos if data.respond_to?(:seek) && data.respond_to?(:pos)
+      data.seek(start) if start
 
       if data.respond_to? :read
         headers['Transfer-Encoding'] = 'chunked'
